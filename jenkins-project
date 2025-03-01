@@ -1,0 +1,75 @@
+This project is for ARC Print Configuration build job, push to ECR and deploy into the AWS Staging ECS cluster below:
+
+Repo: configurationmicroservice.git
+Branch: */develop
+ECR: 349592806832.dkr.ecr.us-west-1.amazonaws.com/arcprint-microservice:config
+ECS cluster: arcprint-microservices
+Service: arcprint-microservice-config
+======================
+
+pipeline {
+    agent any
+    environment {
+        AWS_REGION = 'us-west-1'
+        ECR_REGISTRY = '349592806832.dkr.ecr.us-west-1.amazonaws.com'
+        IMAGE_NAME = 'arcprint-microservice'
+        TAG = 'config'
+        TAG1 = 'configbkp'
+        ECS_Cluster = 'arcprint-microservices'
+        ECS_Service = 'arcprint-microservice-config'
+    }
+    stages {
+        stage('SCM Checkout') {
+            steps{
+                checkout([$class: 'GitSCM',
+                          branches: [[name: '*/develop']],
+                          doGenerateSubmoduleConfigurations: false,
+                          extensions: [],
+                          submoduleCfg: [],
+                          userRemoteConfigs: [[credentialsId: '5089b550-21a6-404c-9dfc-1734088c7ffc',
+                                              url: 'https://supravatm@bitbucket.org/hmajumder/configurationmicroservice.git']]])
+            }
+        }
+        stage('Backup Previous tagged Docker Image') {
+            steps {
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    sh 'export PATH="/usr/local/bin:$PATH"'
+                    sh 'aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}'
+                    sh '''MANIFEST=$(aws ecr batch-get-image --repository-name ${IMAGE_NAME} --image-ids imageTag=${TAG} --output text --query images[].imageManifest)
+                  aws ecr put-image --repository-name ${IMAGE_NAME} --image-tag ${TAG1} --image-manifest "$MANIFEST"'''
+                    sh 'aws ecr describe-images --repository-name ${IMAGE_NAME}'
+                }
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                sh 'pwd;ls;docker info;cat Dockerfile;docker build -f Dockerfile -t ${IMAGE_NAME}:${BUILD_NUMBER} --no-cache  .'
+            }
+        }
+                stage('Tag DockerImage') {
+            steps{
+                sh 'docker tag ${IMAGE_NAME}:${BUILD_NUMBER}  ${IMAGE_NAME}:${TAG}'
+                sh 'docker tag ${IMAGE_NAME}:${TAG} ${ECR_REGISTRY}/${IMAGE_NAME}:${TAG}'
+                sh 'docker images|grep ${IMAGE_NAME}'
+            }
+        }
+        stage('Login to ECR') {
+            steps{
+                sh 'export PATH="/usr/local/bin:$PATH"'
+                sh 'which aws'
+                sh 'aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}'
+            }
+        }
+        stage('Push Image to ECR') {
+            steps{
+                sh 'docker push ${ECR_REGISTRY}/${IMAGE_NAME}:${TAG}'
+            }
+        }
+        stage('Deploying into ECS') {
+            steps{
+                sh 'aws ecs update-service --cluster ${ECS_Cluster} --service ${ECS_Service} --force-new-deployment --region ${AWS_REGION}'
+            }
+        }
+    }
+}
+    
