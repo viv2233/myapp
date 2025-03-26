@@ -1,0 +1,73 @@
+pipeline {
+    agent any  // Runs the job on any available agent
+
+    environment {
+        // Define environment variables
+        GITHUB_REPO = 'https://github.com/vivek22333/test-server.git'
+        DOCKER_IMAGE_NAME = 'myapp'  // Replace with your Docker image name
+        BUILD_TAG = "build-${env.BUILD_NUMBER}"  // Unique tag for each build
+        CONTAINER_PORT = '8000'  // Port inside the container
+        HOST_PORT = '8000'      // Port on the host machine
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                // Pull code from the specified GitHub repository
+                git url: "${GITHUB_REPO}", branch: 'main'  // Or your desired branch
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Build the Docker image from the Dockerfile in the repo
+                    sh """
+                        docker build -t ${DOCKER_IMAGE_NAME}:${BUILD_TAG} .
+                    """
+                }
+            }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                script {
+                    // Debugging: Check if Docker is running
+                    sh "docker ps -a"  // List all containers (running or not)
+
+                    // Run the Docker container, mapping host port 8000 to container port 8000
+                    sh """
+                        docker run -d --name ${DOCKER_IMAGE_NAME}-${BUILD_TAG} -p ${HOST_PORT}:${CONTAINER_PORT} ${DOCKER_IMAGE_NAME}:${BUILD_TAG}
+                    """
+
+                    // Debugging: Check the logs of the container to identify issues
+                    sh """
+                        sleep 10
+                        docker logs ${DOCKER_IMAGE_NAME}-${BUILD_TAG}
+                    """
+                }
+            }
+        }
+
+        stage('Clean Up') {
+            steps {
+                script {
+                    // Stop and remove any running Docker containers (fix for $(...) syntax error)
+                    sh """
+                        docker stop \$(docker ps -q) || true
+                        docker rm \$(docker ps -a -q) || true
+                        # Optionally remove the image if no longer needed
+                        docker rmi ${DOCKER_IMAGE_NAME}:${BUILD_TAG} || true
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // Cleanup even if the build fails
+            sh "docker system prune -f"  // Optional: Remove unused Docker data (images, containers, volumes)
+        }
+    }
+}
