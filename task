@@ -1,0 +1,214 @@
+To create a Jenkins pipeline that launches an EC2 instance on AWS using Terraform, assigns a domain/subdomain to the EC2 instance (using Route 53), logs into the EC2 instance, clones a GitHub repository, and deploys code, you can follow the steps below.
+
+High-Level Workflow:
+Use Terraform to launch an EC2 instance and assign a domain/subdomain.
+
+Jenkins Pipeline:
+
+Run the Terraform script to launch EC2.
+
+SSH into the EC2 instance.
+
+Clone the code from GitHub.
+
+Deploy the application.
+
+Prerequisites:
+Terraform installed and configured on Jenkins.
+
+AWS credentials configured for Terraform.
+
+GitHub repository URL.
+
+Domain/subdomain configured in AWS Route 53 or another DNS provider.
+
+Step 1: Terraform Configuration
+Create a main.tf file to launch the EC2 instance, assign a security group, and create a Route 53 DNS record for the subdomain.
+
+main.tf:
+hcl
+Copy
+provider "aws" {
+  region = "us-east-1"  # Specify the region (can be changed as needed)
+}
+
+# Create EC2 security group
+resource "aws_security_group" "ec2_sg" {
+  name        = "ec2_security_group"
+  description = "Allow inbound SSH, HTTP, and HTTPS traffic"
+  
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Create an EC2 instance
+resource "aws_instance" "my_ec2_instance" {
+  ami           = "ami-0c55b159cbfafe1f0"  # Replace with an appropriate AMI ID for your region
+  instance_type = "t2.micro"  # Adjust instance type as needed
+  key_name      = "your-key-pair"  # Replace with your SSH key pair name
+  security_groups = [aws_security_group.ec2_sg.name]
+
+  tags = {
+    Name = "MyAppServer"
+  }
+
+  # Enable SSH access
+  associate_public_ip_address = true
+
+  # Use user data for initializing the EC2 instance (optional)
+  user_data = <<-EOF
+              #!/bin/bash
+              yum update -y
+              yum install -y git
+              yum install -y docker
+              systemctl start docker
+              systemctl enable docker
+              EOF
+}
+
+# Create a Route 53 DNS record (A record for subdomain)
+resource "aws_route53_record" "app_subdomain" {
+  zone_id = "YOUR_ROUTE53_HOSTED_ZONE_ID"  # Replace with your Route 53 hosted zone ID
+  name    = "app.example.com"  # Replace with your desired subdomain
+  type    = "A"
+  ttl     = 300
+  records = [aws_instance.my_ec2_instance.public_ip]
+}
+Key Points:
+Security Group: The EC2 instance is configured with a security group that allows inbound traffic on ports 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+
+EC2 Instance: The EC2 instance is created with a specified AMI ID, instance type (t2.micro), and SSH key pair.
+
+Route 53 Record: The Route 53 record points the app.example.com subdomain to the EC2 instance's public IP. Replace YOUR_ROUTE53_HOSTED_ZONE_ID with your actual hosted zone ID.
+
+Step 2: Jenkins Pipeline Configuration
+Here is a Jenkinsfile to automate the EC2 launch, code deployment, and provide the deployed URL.
+
+Jenkinsfile:
+groovy
+Copy
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'us-east-1'  // Specify the AWS region
+        EC2_KEY_PAIR = 'your-key-pair'  // Replace with your SSH key pair name
+        GITHUB_REPO = 'https://github.com/yourusername/yourrepo.git'  // Replace with your GitHub repo URL
+        EC2_INSTANCE_IP = ''  // Will be populated after Terraform applies
+        DOMAIN_NAME = 'app.example.com'  // Replace with your subdomain
+        PRIVATE_KEY_PATH = '/path/to/your/private-key.pem'  // Path to your private SSH key
+    }
+
+    stages {
+        stage('Setup Terraform') {
+            steps {
+                script {
+                    // Initialize Terraform
+                    sh 'terraform init'
+                }
+            }
+        }
+
+        stage('Launch EC2 Instance with Terraform') {
+            steps {
+                script {
+                    // Apply the Terraform configuration to launch EC2
+                    sh 'terraform apply -auto-approve'
+
+                    // Retrieve the EC2 instance's public IP
+                    def ec2Instance = sh(script: 'terraform output -raw my_ec2_instance_public_ip', returnStdout: true).trim()
+                    env.EC2_INSTANCE_IP = ec2Instance
+                    echo "EC2 instance created with IP: ${EC2_INSTANCE_IP}"
+                }
+            }
+        }
+
+        stage('Deploy Code to EC2') {
+            steps {
+                script {
+                    // SSH into the EC2 instance and deploy the application
+                    sh """
+                        ssh -i ${PRIVATE_KEY_PATH} -o StrictHostKeyChecking=no ec2-user@${EC2_INSTANCE_IP} 'git clone ${GITHUB_REPO} /home/ec2-user/app'
+                        ssh -i ${PRIVATE_KEY_PATH} -o StrictHostKeyChecking=no ec2-user@${EC2_INSTANCE_IP} 'cd /home/ec2-user/app && ./deploy.sh'  // Replace with your actual deploy script if needed
+                    """
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    // Print out the deployed application URL
+                    echo "Application deployed at http://${DOMAIN_NAME}"
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // Cleanup after the build if necessary (optional)
+            sh 'terraform destroy -auto-approve'  // Destroy resources after the build (optional)
+        }
+    }
+}
+Explanation of Jenkinsfile:
+Terraform Setup:
+
+Initializes Terraform using terraform init.
+
+Applies the Terraform configuration to launch the EC2 instance using terraform apply -auto-approve.
+
+Deploy Code:
+
+Once the EC2 instance is launched, the script uses SSH to clone the GitHub repository and deploy the application. Replace deploy.sh with your specific deployment script (e.g., docker-compose or any custom deployment steps).
+
+Verify Deployment:
+
+After the code is deployed, the URL of the deployed application (http://app.example.com) is printed.
+
+Post Actions:
+
+Optionally, you can destroy the infrastructure after the pipeline runs using terraform destroy. You can also choose to keep the EC2 instance running.
+
+Step 3: Run the Jenkins Pipeline
+Ensure that Jenkins has access to AWS credentials (either by using IAM roles or by configuring the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY as environment variables in Jenkins).
+
+Make sure Jenkins has access to your private SSH key (PRIVATE_KEY_PATH) so it can SSH into the EC2 instance.
+
+Trigger the pipeline manually or set up a webhook to trigger it automatically when changes are made to your GitHub repository.
+
+Final Output:
+After the Jenkins pipeline completes, you will have:
+
+An EC2 instance launched on AWS.
+
+A subdomain (app.example.com) pointing to the EC2 instance.
+
+The application deployed on the EC2 instance.
+
+The deployed application URL (e.g., http://app.example.com) printed in the Jenkins logs.
+
+Conclusion:
+This script automates the process of launching an EC2 instance, assigning a domain/subdomain, cloning the application from GitHub, and deploying it. It provides a complete CI/CD solution integrated with Terraform and Jenkins for deploying applications to AWS.
+
+
+
