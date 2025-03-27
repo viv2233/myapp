@@ -1,0 +1,10 @@
+Host github.com
+  User git
+  Hostname github.com
+  Port 22
+  IdentityFile ~/.ssh/id_rsa
+  IdentitiesOnly yes
+  ServerAliveInterval 60
+  ServerAliveCountMax 5
+-------------
+ssh -T git@github.com
