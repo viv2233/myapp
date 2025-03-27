@@ -1,0 +1,53 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key')  // Store your AWS credentials in Jenkins credentials store
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checkout your Terraform code from your Git repository
+                git 'https://github.com/your-repository-url.git'
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                // Initialize Terraform
+                script {
+                    sh 'terraform init'
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                // Generate Terraform execution plan
+                script {
+                    sh 'terraform plan -out=tfplan'
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                // Apply Terraform plan
+                script {
+                    sh 'terraform apply -auto-approve tfplan'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Terraform applied successfully!'
+        }
+        failure {
+            echo 'Terraform failed to apply.'
+        }
+    }
+}
