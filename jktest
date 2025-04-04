@@ -1,0 +1,6 @@
+manage Jenkins >security(scroll down)- Agent (fixed)-40933-save--allow-40933-anyware-in security group
+go to other node update and install java,instal docker,git
+go to jenkisn server manage jenkisn > Nodes >New nodes- Node name-slave1 -permanet-remote root ditectory=/home/Jenkins
+Udage- use this node as possible as >launch method- launch agent connecting it to the controller> Avaibility-keep this...
+click on this it will give me a command
+in node- creta /home/jenkisn add permiossin
