@@ -1,0 +1,145 @@
+Prerequisites:
+A Jenkins server running on an EC2 instance or other server.
+
+Nginx installed on the same server as Jenkins or on a separate server.
+
+A domain name that points to your server’s IP address (if using Nginx as a reverse proxy for external access).
+
+A valid SSL certificate for your domain (can use Let's Encrypt for a free SSL certificate).
+
+Ubuntu or another Linux distribution (commands shown for Ubuntu).
+
+Steps:
+1. Install Jenkins (if not already installed)
+If Jenkins is not installed yet, you can install it using the following commands on Ubuntu:
+
+# Update system
+sudo apt update
+
+sudo apt update
+sudo apt install fontconfig openjdk-17-jre
+java -version
+openjdk version "17.0.13" 2024-10-15
+OpenJDK Runtime Environment (build 17.0.13+11-Debian-2)
+OpenJDK 64-Bit Server VM (build 17.0.13+11-Debian-2, mixed mode, sharing)
+
+
+
+sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]" \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+
+sudo apt-get update
+sudo apt-get install Jenkins
+
+Jenkins should now be available on port 8080 by default (e.g., http://your_server_ip:8080).
+
+2. Install Nginx
+If you don’t have Nginx installed yet, you can install it with the following command:
+
+# Install Nginx
+sudo apt update
+sudo apt install nginx
+After installation, Nginx should automatically start. You can check its status with:
+
+sudo systemctl status nginx
+3. Install Certbot and Obtain SSL Certificate (Let’s Encrypt)
+To secure the connection using HTTPS, you can use Let’s Encrypt for a free SSL certificate.
+
+Install Certbot (Let’s Encrypt client) on your server:
+
+# Install Certbot and Nginx plugin
+sudo apt install certbot python3-certbot-nginx
+Obtain an SSL certificate:
+
+Assuming your domain points to your server, run the following command to obtain and install the SSL certificate automatically:
+
+
+sudo certbot --nginx -d yourdomain.com
+Follow the prompts to complete the SSL setup. This will automatically configure Nginx to use SSL for your domain.
+
+4. Configure Nginx as Reverse Proxy for Jenkins
+Configure Nginx to act as a reverse proxy for Jenkins. Edit the Nginx configuration file:
+
+sudo nano /etc/nginx/sites-available/jenkins
+Add the following configuration for Nginx:
+
+server {
+    listen 80;
+    server_name yourdomain.com;
+
+    # Redirect all HTTP traffic to HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name yourdomain.com;
+
+    # SSL Configuration
+    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Proxy configuration for Jenkins
+    location / {
+        proxy_pass http://localhost:8080;  # Jenkins default port
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support for Jenkins
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+    }
+
+    }
+Make sure to replace yourdomain.com with your actual domain name.
+
+Enable the Nginx site configuration by creating a symbolic link:
+
+
+sudo ln -s /etc/nginx/sites-available/jenkins /etc/nginx/sites-enabled/
+Test the Nginx configuration to ensure there are no errors:
+
+sudo nginx -t
+If there are no errors, you should see a message like this:
+
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+Reload Nginx to apply the changes:
+
+sudo systemctl reload nginx
+
+5. Configure Jenkins to Allow Reverse Proxy
+Jenkins may need to be configured to work behind a reverse proxy.
+
+Edit the Jenkins configuration file:
+
+sudo nano /etc/default/jenkins
+Add the following options to ensure Jenkins is aware that it's behind a reverse proxy:
+
+
+JENKINS_ARGS="--httpPort=8080 --httpsPort=-1"
+This will ensure Jenkins only listens on HTTP (because Nginx will handle the HTTPS connection).
+
+Restart Jenkins to apply the changes:
+
+sudo systemctl restart jenkins
+6. Test the Setup
+Open your browser and navigate to https://yourdomain.com. You should be able to access the Jenkins dashboard securely over HTTPS.
+
+7. Renew SSL Certificate (Let's Encrypt)
+Let’s Encrypt certificates are valid for 90 days. You can set up a cron job to renew the certificate automatically:
+
+
+# Open the crontab file
+
+sudo crontab -e
+
+# Add the following line to renew the certificate every 12 hours
+0 0,12 * * * certbot renew --quiet && systemctl reload nginx
