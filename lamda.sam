@@ -1,0 +1,207 @@
+image-flex-490004636133-staging-UriToS3Key
+----------
+_snapshots_
+----------
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`UriToS3Key should match snapshot 1`] = `
+Object {
+  "clientIp": "108.41.158.64",
+  "headers": Object {
+    "accept": Array [
+      Object {
+        "key": "Accept",
+        "value": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+      },
+    ],
+    "accept-encoding": Array [
+      Object {
+        "key": "Accept-Encoding",
+        "value": "gzip, deflate",
+      },
+    ],
+    "accept-language": Array [
+      Object {
+        "key": "Accept-Language",
+        "value": "en-US,en;q=0.9",
+      },
+    ],
+    "cache-control": Array [
+      Object {
+        "key": "Cache-Control",
+        "value": "max-age=0",
+      },
+    ],
+    "host": Array [
+      Object {
+        "key": "Host",
+        "value": "d1ppm5fhf7dvj2.cloudfront.net",
+      },
+    ],
+    "upgrade-insecure-requests": Array [
+      Object {
+        "key": "Upgrade-Insecure-Requests",
+        "value": "1",
+      },
+    ],
+    "user-agent": Array [
+      Object {
+        "key": "User-Agent",
+        "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36",
+      },
+    ],
+  },
+  "method": "GET",
+  "querystring": "nextExtension=avif&height=&sourceImage=/ghosted.jpg&width=300",
+  "uri": "/300/ghosted.avif",
+}
+`;
+-------------
+uit
+---------
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`UriToS3Key should match snapshot 1`] = `
+Object {
+  "clientIp": "108.41.158.64",
+  "headers": Object {
+    "accept": Array [
+      Object {
+        "key": "Accept",
+        "value": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+      },
+    ],
+    "accept-encoding": Array [
+      Object {
+        "key": "Accept-Encoding",
+        "value": "gzip, deflate",
+      },
+    ],
+    "accept-language": Array [
+      Object {
+        "key": "Accept-Language",
+        "value": "en-US,en;q=0.9",
+      },
+    ],
+    "cache-control": Array [
+      Object {
+        "key": "Cache-Control",
+        "value": "max-age=0",
+      },
+    ],
+    "host": Array [
+      Object {
+        "key": "Host",
+        "value": "d1ppm5fhf7dvj2.cloudfront.net",
+      },
+    ],
+    "upgrade-insecure-requests": Array [
+      Object {
+        "key": "Upgrade-Insecure-Requests",
+        "value": "1",
+      },
+    ],
+    "user-agent": Array [
+      Object {
+        "key": "User-Agent",
+        "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36",
+      },
+    ],
+  },
+  "method": "GET",
+  "querystring": "nextExtension=avif&height=&sourceImage=/ghosted.jpg&width=300",
+  "uri": "/300/ghosted.avif",
+}
+`;
+----------
+jeson.sh
+--------
+const UriToS3Key = require('./UriToS3Key')
+
+exports.handler = async event => await UriToS3Key(event)
+--------
+package.jeson
+-------
+{
+  "name": "url-to-s3-key",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {},
+  "description": ""
+}
+------------
+uri to s3 key.js
+-------
+'use strict'
+
+const { parse } = require('querystring')
+
+const DEFAULT_EXTENSION = 'avif'
+const BAD_JPG_EXTENSION = 'jpg'
+const GOOD_JPG_EXTENSION = 'jpeg'
+
+const UriToS3Key = event => {
+  const { request, request: { headers, querystring, uri } } = event.Records[0].cf
+  const { h: height = '', w: width, f:format = DEFAULT_EXTENSION } = parse(querystring)
+
+  if (!width || isNaN(parseInt(width, 10))) return request
+
+  const [,prefix, imageName, prevExtension] = uri.match(/(.*)\/(.*)\.(\w*)/)
+  const acceptHeader = Array.isArray(headers.accept)
+    ? headers.accept[0].value
+    : ''
+  const nextExtension = acceptHeader.indexOf(format) !== -1
+    ? format
+    : prevExtension === BAD_JPG_EXTENSION
+      ? GOOD_JPG_EXTENSION
+      : prevExtension.toLowerCase()
+  const dimensions = height
+    ? `${width}x${height}`
+    : width
+  const key = `${prefix}/${dimensions}/${imageName}.${nextExtension}`
+
+  request.uri = key
+  request.querystring = [
+    `nextExtension=${nextExtension}`,
+    `height=${height}`,
+    `sourceImage=${prefix}/${imageName}.${prevExtension}`,
+    `width=${width}`
+  ].join('&')
+
+  return request
+}
+
+module.exports = UriToS3Key
+---------
+uri to s3 key.js test.sh
+-----
+const UriToS3Key = require('./UriToS3Key')
+const mockEvent = require('viewer-request-event')
+
+describe('UriToS3Key', () => {
+  it('should match snapshot', async () => {
+    const response = await UriToS3Key(mockEvent)
+    expect(response).toMatchSnapshot()
+  })
+})
+-----------------
+image-flex-490004636133-staging-GetOrCreateImage
+---------
+index.js
+----------
+'use strict'
+
+const GetOrCreateImage = require('./GetOrCreateImage')
+
+exports.handler = async event => await GetOrCreateImage(event)
+
+
+
+
