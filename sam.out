@@ -1,0 +1,191 @@
+root@k8s:~/Image-Flex# npm run setup -- dev
+
+> image-flex@1.0.0 setup
+> bash -c './bin/setup.sh $npm_package_name $0 $1' "dev"
+
+ENV argument passed. Using that value: dev
+No region specified. Using default value: us-east-1
+
+Are you sure you want to create this deployment bucket: image-flex-490004636133-dev-deploy (Y/n)?y
+Creating bucket: image-flex-490004636133-dev-deploy
+make_bucket: image-flex-490004636133-dev-deploy
+
+npm notice
+npm notice New major version of npm available! 7.10.0 -> 11.3.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.3.0
+npm notice Run npm install -g npm@11.3.0 to update!
+npm notice
+root@k8s:~/Image-Flex#  npm run update -- dev
+
+> image-flex@1.0.0 update
+> bash -c './bin/update.sh $npm_package_name $0 $1 $2' "dev"
+
+
+> image-flex@1.0.0 build
+> bash -c './bin/build.sh'
+
+Starting Build inside a container
+Building codeuri: /root/Image-Flex/src/UriToS3Key runtime: nodejs16.x architecture: x86_64 functions: UriToS3KeyFunction
+
+Fetching public.ecr.aws/sam/build-nodejs16.x:latest-x86_64 Docker container image.........................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+Mounting /root/Image-Flex/src/UriToS3Key as /tmp/samcli/source:ro,delegated, inside runtime container
+ Running NodejsNpmBuilder:NpmPack
+ Running NodejsNpmBuilder:CopyNpmrcAndLockfile
+ Running NodejsNpmBuilder:CopySource
+ Running NodejsNpmBuilder:NpmInstall
+ Running NodejsNpmBuilder:CleanUpNpmrc
+ Running NodejsNpmBuilder:LockfileCleanUp
+Building codeuri: /root/Image-Flex/src/GetOrCreateImage runtime: nodejs16.x architecture: x86_64 functions: GetOrCreateImageFunction
+Failed to download a new public.ecr.aws/sam/build-nodejs16.x:latest-x86_64 image. Invoking with the already downloaded image.
+Mounting /root/Image-Flex/src/GetOrCreateImage as /tmp/samcli/source:ro,delegated, inside runtime container
+
+Build Succeeded
+
+Built Artifacts  : .aws-sam/build
+Built Template   : .aws-sam/build/template.yaml
+
+Commands you can use next
+=========================
+[*] Validate SAM template: sam validate
+[*] Invoke Function: sam local invoke
+[*] Test Function in the Cloud: sam sync --stack-name {{stack-name}} --watch
+[*] Deploy: sam deploy --guided
+ Running NodejsNpmBuilder:NpmPack
+ Running NodejsNpmBuilder:CopyNpmrcAndLockfile
+ Running NodejsNpmBuilder:CopySource
+ Running NodejsNpmBuilder:NpmInstall
+ Running NodejsNpmBuilder:CleanUpNpmrc
+ Running NodejsNpmBuilder:LockfileCleanUp
+
+SAM CLI update available (1.137.1); (1.136.0 installed)
+To download: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html
+
+> image-flex@1.0.0 package
+> bash -c './bin/package.sh $npm_package_name $0 $1' "dev"
+
+ENV argument passed. Using that value: dev
+No region specified. Using default value: us-east-1
+Packaging artifacts to image-flex-490004636133-dev-deploy
+        Uploading to 5f6e7147ca3be377979db349a8a678f4  2150 / 2150  (100.00%)
+        Uploading to 2f4164247906723535da2dd44e0ba8f3  9660827 / 9660827  (100.00%)
+
+Successfully packaged artifacts and wrote output template to file .aws-sam/build/template-packaged.yaml.
+Execute the following command to deploy the packaged template
+sam deploy --template-file /root/Image-Flex/.aws-sam/build/template-packaged.yaml --stack-name <YOUR STACK NAME>
+
+
+> image-flex@1.0.0 deploy
+> bash -c './bin/deploy.sh $npm_package_name $0 $1 $2' "dev"
+
+ENV argument passed. Using that value: dev
+No region specified. Using default value: us-east-1
+Deploying stack: image-flex-490004636133-dev
+
+
+        Deploying with following values
+        ===============================
+        Stack name                   : image-flex-490004636133-dev
+        Region                       : us-east-1
+        Confirm changeset            : False
+        Disable rollback             : False
+        Deployment s3 bucket         : None
+        Capabilities                 : ["CAPABILITY_IAM"]
+        Parameter overrides          : {}
+        Signing Profiles             : {}
+
+Initiating deployment
+=====================
+
+
+
+Waiting for changeset to be created..
+
+CloudFormation stack changeset
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------    
+Operation                                     LogicalResourceId                             ResourceType                                  Replacement
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------    
++ Add                                         CloudFrontLoggingBucket                       AWS::S3::Bucket                               N/A
++ Add                                         Distribution                                  AWS::CloudFront::Distribution                 N/A
++ Add                                         EdgeLambdaRole                                AWS::IAM::Role                                N/A
++ Add                                         GetOrCreateImageFunctionAliaslive             AWS::Lambda::Alias                            N/A
++ Add                                         GetOrCreateImageFunctionVersion788981ed18     AWS::Lambda::Version                          N/A
++ Add                                         GetOrCreateImageFunction                      AWS::Lambda::Function                         N/A
++ Add                                         ImageBucketPolicy                             AWS::S3::BucketPolicy                         N/A
++ Add                                         ImageBucket                                   AWS::S3::Bucket                               N/A
++ Add                                         OriginAccessId                                AWS::CloudFront::CloudFrontOriginAccessIden   N/A
+                                                                                            tity
++ Add                                         UriToS3KeyFunctionAliaslive                   AWS::Lambda::Alias                            N/A
++ Add                                         UriToS3KeyFunctionVersionc1299d9f66           AWS::Lambda::Version                          N/A
++ Add                                         UriToS3KeyFunction                            AWS::Lambda::Function                         N/A
++ Add                                         WebACL                                        AWS::WAFv2::WebACL                            N/A
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------    
+
+
+Changeset created successfully. arn:aws:cloudformation:us-east-1:490004636133:changeSet/samcli-deploy1744609268/44c7360b-28f2-4724-ae1a-931373c04d11
+
+
+2025-04-14 05:41:16 - Waiting for stack create/update to complete
+
+CloudFormation events from stack operations (refresh every 5.0 seconds)
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------    
+ResourceStatus                                ResourceType                                  LogicalResourceId                             ResourceStatusReason
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------    
+CREATE_IN_PROGRESS                            AWS::CloudFormation::Stack                    image-flex-490004636133-dev                   User Initiated
+CREATE_IN_PROGRESS                            AWS::IAM::Role                                EdgeLambdaRole                                -
+CREATE_IN_PROGRESS                            AWS::S3::Bucket                               ImageBucket                                   -
+CREATE_IN_PROGRESS                            AWS::CloudFront::CloudFrontOriginAccessIden   OriginAccessId                                -
+                                              tity
+CREATE_IN_PROGRESS                            AWS::S3::Bucket                               CloudFrontLoggingBucket                       -
+CREATE_IN_PROGRESS                            AWS::WAFv2::WebACL                            WebACL                                        -
+CREATE_IN_PROGRESS                            AWS::CloudFront::CloudFrontOriginAccessIden   OriginAccessId                                Resource creation Initiated
+                                              tity
+CREATE_IN_PROGRESS                            AWS::IAM::Role                                EdgeLambdaRole                                Resource creation Initiated
+CREATE_IN_PROGRESS                            AWS::S3::Bucket                               CloudFrontLoggingBucket                       Resource creation Initiated
+CREATE_IN_PROGRESS                            AWS::S3::Bucket                               ImageBucket                                   Resource creation Initiated
+CREATE_IN_PROGRESS                            AWS::WAFv2::WebACL                            WebACL                                        Resource creation Initiated
+CREATE_COMPLETE                               AWS::CloudFront::CloudFrontOriginAccessIden   OriginAccessId                                -
+                                              tity
+CREATE_COMPLETE                               AWS::WAFv2::WebACL                            WebACL                                        -
+CREATE_COMPLETE                               AWS::S3::Bucket                               CloudFrontLoggingBucket                       -
+CREATE_COMPLETE                               AWS::S3::Bucket                               ImageBucket                                   -
+CREATE_IN_PROGRESS                            AWS::S3::BucketPolicy                         ImageBucketPolicy                             -
+CREATE_IN_PROGRESS                            AWS::S3::BucketPolicy                         ImageBucketPolicy                             Resource creation Initiated
+CREATE_COMPLETE                               AWS::S3::BucketPolicy                         ImageBucketPolicy                             -
+CREATE_COMPLETE                               AWS::IAM::Role                                EdgeLambdaRole                                -
+CREATE_IN_PROGRESS                            AWS::Lambda::Function                         GetOrCreateImageFunction                      -
+CREATE_IN_PROGRESS                            AWS::Lambda::Function                         UriToS3KeyFunction                            -
+CREATE_FAILED                                 AWS::Lambda::Function                         GetOrCreateImageFunction                      Resource handler returned message:
+                                                                                                                                          "Function creation failed because the
+                                                                                                                                          function already exists" (RequestToken:        
+                                                                                                                                          b14f6134-4445-de31-e369-5fc092bc1f35,
+                                                                                                                                          HandlerErrorCode: AlreadyExists)
+CREATE_FAILED                                 AWS::Lambda::Function                         UriToS3KeyFunction                            Resource handler returned message:
+                                                                                                                                          "Function creation failed because the
+                                                                                                                                          function already exists" (RequestToken:        
+                                                                                                                                          08bfd2ec-8edb-2d9a-29aa-6301a2a2ede1,
+                                                                                                                                          HandlerErrorCode: AlreadyExists)
+ROLLBACK_IN_PROGRESS                          AWS::CloudFormation::Stack                    image-flex-490004636133-dev                   The following resource(s) failed to create:    
+                                                                                                                                          [UriToS3KeyFunction,
+                                                                                                                                          GetOrCreateImageFunction]. Rollback
+                                                                                                                                          requested by user.
+DELETE_IN_PROGRESS                            AWS::WAFv2::WebACL                            WebACL                                        -
+DELETE_IN_PROGRESS                            AWS::S3::Bucket                               CloudFrontLoggingBucket                       -
+DELETE_IN_PROGRESS                            AWS::S3::BucketPolicy                         ImageBucketPolicy                             -
+DELETE_COMPLETE                               AWS::Lambda::Function                         UriToS3KeyFunction                            -
+DELETE_COMPLETE                               AWS::Lambda::Function                         GetOrCreateImageFunction                      -
+DELETE_IN_PROGRESS                            AWS::IAM::Role                                EdgeLambdaRole                                -
+DELETE_COMPLETE                               AWS::S3::Bucket                               CloudFrontLoggingBucket                       -
+DELETE_COMPLETE                               AWS::WAFv2::WebACL                            WebACL                                        -
+DELETE_COMPLETE                               AWS::S3::BucketPolicy                         ImageBucketPolicy                             -
+DELETE_IN_PROGRESS                            AWS::S3::Bucket                               ImageBucket                                   -
+DELETE_IN_PROGRESS                            AWS::CloudFront::CloudFrontOriginAccessIden   OriginAccessId                                -
+                                              tity
+DELETE_COMPLETE                               AWS::S3::Bucket                               ImageBucket                                   -
+DELETE_COMPLETE                               AWS::CloudFront::CloudFrontOriginAccessIden   OriginAccessId                                -
+                                              tity
+DELETE_COMPLETE                               AWS::IAM::Role                                EdgeLambdaRole                                -
+ROLLBACK_COMPLETE                             AWS::CloudFormation::Stack                    image-flex-490004636133-dev                   -
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------    
+
+Error: Failed to create/update the stack: image-flex-490004636133-dev, Waiter StackCreateComplete failed: Waiter encountered a terminal failure state: For expression "Stacks[].StackStatus" we matched expected path: "ROLLBACK_COMPLETE" at least once
+root@k8s:~/Image-Flex# 
