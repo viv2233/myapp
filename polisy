@@ -1,0 +1,29 @@
+[
+    {
+        "AllowedHeaders": [
+            "*"
+        ],
+        "AllowedMethods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+        ],
+        "AllowedOrigins": [
+            "https://partner.snackout.pk",
+            "https://www.partner.snackout.pk",
+            "https://beta.partner.snackout.pk",
+            "https://www.beta.partner.snackout.pk",
+            "http://localhost:5173",
+            "http://localhost:2633",
+            "https://api.snackout.pk",
+            "https://www.api.snackout.pk"
+        ],
+        "ExposeHeaders": [
+            "Content-Type",
+            "Content-Length",
+            "ETag"
+        ],
+        "MaxAgeSeconds": 3600
+    }
+]
