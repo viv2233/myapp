@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  EdgeLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+              - edgelambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: /service-role/
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSXrayFullAccess
+      Policies:
+        - PolicyName: prods3-Lambda-S3
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              Effect: Allow
+              Action:
+                - s3:*
+              Resource:
+                - arn:aws:s3:::prods3
+                - arn:aws:s3:::prods3/*
+
+  ImageBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: prods3
+      PolicyDocument:
+        Id: prods3-policy
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+              - s3:GetObject
+            Effect: Allow
+            Resource: arn:aws:s3:::prods3/*
+            Principal:
+              AWS:
+                Fn::Sub: arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${OriginAccessId}
+
+  # CloudFront Distribution - use prods3
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+        Comment: Distribution for prods3
+        DefaultCacheBehavior:
+          Compress: true
+          ForwardedValues:
+            QueryString: true
+            QueryStringCacheKeys:
+              - w
+              - h
+              - f
+            Cookies:
+              Forward: none
+            Headers:
+              - Access-Control-Request-Method
+              - Access-Control-Request-Headers
+              - Origin
+          LambdaFunctionAssociations:
+            - EventType: viewer-request
+              LambdaFunctionARN: !Ref UriToS3KeyFunction.Version
+            - EventType: origin-response
+              LambdaFunctionARN: !Ref GetOrCreateImageFunction.Version
+          MinTTL: 100
+          TargetOriginId: prods3
+          ViewerProtocolPolicy: allow-all
+        Enabled: true
+        Logging:
+          Bucket: !GetAtt CloudFrontLoggingBucket.DomainName
+        Origins:
+          - DomainName: prods3.s3.amazonaws.com
+            Id: prods3
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${OriginAccessId}
