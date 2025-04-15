@@ -1,0 +1,232 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  EdgeLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+            - edgelambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /service-role/
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      - arn:aws:iam::aws:policy/AWSXrayFullAccess
+      Policies:
+      - PolicyName:
+          Fn::Sub: ${AWS::StackName}-images-Lambda-S3
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            Effect: Allow
+            Action:
+            - s3:*
+            Resource:
+            - Fn::Sub: arn:aws:s3:::${AWS::StackName}-images
+            - Fn::Sub: arn:aws:s3:::${AWS::StackName}-images/*
+    Metadata:
+      SamResourceId: EdgeLambdaRole
+  OriginAccessId:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment:
+          Fn::Sub: ${AWS::StackName}-OriginAccessId
+    Metadata:
+      SamResourceId: OriginAccessId
+  ImageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: ${AWS::StackName}-images
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+        - AllowedOrigins:
+          - '*'
+          AllowedMethods:
+          - GET
+          AllowedHeaders:
+          - '*'
+    Metadata:
+      SamResourceId: ImageBucket
+  ImageBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: ImageBucket
+      PolicyDocument:
+        Id:
+          Fn::Sub: ${AWS::StackName}-images-policy
+        Version: '2012-10-17'
+        Statement:
+        - Action:
+          - s3:GetObject
+          Effect: Allow
+          Resource:
+            Fn::Sub: arn:aws:s3:::${AWS::StackName}-images/*
+          Principal:
+            AWS:
+              Fn::Sub: arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity
+                ${OriginAccessId}
+    Metadata:
+      SamResourceId: ImageBucketPolicy
+  CloudFrontLoggingBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: ${AWS::StackName}-cflogs
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: ObjectWriter
+    Metadata:
+      SamResourceId: CloudFrontLoggingBucket
+  UriToS3KeyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${AWS::StackName}-UriToS3Key
+      AutoPublishAlias: live
+      CodeUri: s3://image-flex-490004636133-staging-deploy/5f6e7147ca3be377979db349a8a678f4
+      Handler: index.handler
+      Runtime: nodejs16.x
+      MemorySize: 128
+      Timeout: 1
+      Role:
+        Fn::GetAtt:
+        - EdgeLambdaRole
+        - Arn
+    Metadata:
+      SamResourceId: UriToS3KeyFunction
+  GetOrCreateImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${AWS::StackName}-GetOrCreateImage
+      AutoPublishAlias: live
+      CodeUri: s3://image-flex-490004636133-staging-deploy/2f4164247906723535da2dd44e0ba8f3
+      Handler: index.handler
+      Runtime: nodejs16.x
+      MemorySize: 256
+      Timeout: 30
+      Role:
+        Fn::GetAtt:
+        - EdgeLambdaRole
+        - Arn
+    Metadata:
+      SamResourceId: GetOrCreateImageFunction
+  WebACL:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      DefaultAction:
+        Allow: {}
+      Name:
+        Fn::Sub: ${AWS::StackName}-WebAcl
+      Rules:
+      - Name: AWS-AWSManagedRulesCommonRuleSet
+        Priority: 0
+        OverrideAction:
+          None: {}
+        VisibilityConfig:
+          SampledRequestsEnabled: true
+          CloudWatchMetricsEnabled: true
+          MetricName:
+            Fn::Sub: ${AWS::StackName}-MetricForAMRCRS
+        Statement:
+          ManagedRuleGroupStatement:
+            VendorName: AWS
+            Name: AWSManagedRulesCommonRuleSet
+            ExcludedRules:
+            - Name: NoUserAgent_HEADER
+      Scope: CLOUDFRONT
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName:
+          Fn::Sub: ${AWS::StackName}-WebAcl
+    Metadata:
+      SamResourceId: WebACL
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+        Comment:
+          Fn::Sub: Distribution for ${AWS::StackName}
+        DefaultCacheBehavior:
+          Compress: true
+          ForwardedValues:
+            QueryString: true
+            QueryStringCacheKeys:
+            - w
+            - h
+            - f
+            Cookies:
+              Forward: none
+            Headers:
+            - Access-Control-Request-Method
+            - Access-Control-Request-Headers
+            - Origin
+          LambdaFunctionAssociations:
+          - EventType: viewer-request
+            LambdaFunctionARN:
+              Ref: UriToS3KeyFunction.Version
+          - EventType: origin-response
+            LambdaFunctionARN:
+              Ref: GetOrCreateImageFunction.Version
+          MinTTL: 100
+          TargetOriginId:
+            Fn::Sub: ${AWS::StackName}-images
+          ViewerProtocolPolicy: allow-all
+        Enabled: true
+        Logging:
+          Bucket:
+            Fn::GetAtt:
+            - CloudFrontLoggingBucket
+            - DomainName
+        Origins:
+        - DomainName:
+            Fn::Sub: ${AWS::StackName}-images.s3.amazonaws.com
+          Id:
+            Fn::Sub: ${AWS::StackName}-images
+          S3OriginConfig:
+            OriginAccessIdentity:
+              Fn::Sub: origin-access-identity/cloudfront/${OriginAccessId}
+        PriceClass: PriceClass_All
+        WebACLId:
+          Fn::GetAtt:
+          - WebACL
+          - Arn
+    Metadata:
+      SamResourceId: Distribution
+Outputs:
+  DistributionDomain:
+    Value:
+      Fn::GetAtt:
+      - Distribution
+      - DomainName
+    Description: Cloudfront distribution domain.
+  UriToS3KeyFunction:
+    Value:
+      Ref: UriToS3KeyFunction
+    Description: Lambda function for the Cloudfront viewer-request event.
+  GetOrCreateImageFunction:
+    Value:
+      Ref: GetOrCreateImageFunction
+    Description: Lambda function for the Cloudfront origin-response event.
