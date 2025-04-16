@@ -1,0 +1,13 @@
+masker-
+cd ~/.ssh
+ls
+ssh-keygen
+id
+public key add in agent-
+in M
+nodes -Agent-vinod
+remote root directory
+/home/ubuntu
+labels - vinode
+lounch agent via ssh
+add jrnkins privet key
