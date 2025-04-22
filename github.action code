@@ -1,0 +1,65 @@
+
+name: Build and Deploy to ECS
+
+on:
+  push:
+    branches:
+      - develop
+
+env:
+  AWS_REGION: us-west-1
+  ECR_REGISTRY: 349592806832.dkr.ecr.us-west-1.amazonaws.com
+  IMAGE_NAME: arcprint-microservice
+  TAG: config
+  TAG1: configbkp
+  ECS_CLUSTER: arcprint-microservices
+  ECS_SERVICE: arcprint-microservice-config
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Backup previous tagged Docker image (if exists)
+        shell: bash
+        run: |
+          set -e
+          MANIFEST=$(aws ecr batch-get-image --repository-name $IMAGE_NAME --image-ids imageTag=$TAG --query 'images[].imageManifest' --output text || true)
+          if [ ! -z "$MANIFEST" ]; then
+            aws ecr put-image --repository-name $IMAGE_NAME --image-tag $TAG1 --image-manifest "$MANIFEST"
+            aws ecr describe-images --repository-name $IMAGE_NAME
+          else
+            echo "No image with tag $TAG found to backup."
+          fi
+
+      - name: Build Docker image
+        run: |
+          docker build -f Dockerfile -t $IMAGE_NAME:${{ github.run_number }} --no-cache .
+
+      - name: Tag Docker image
+        run: |
+          docker tag $IMAGE_NAME:${{ github.run_number }} $IMAGE_NAME:$TAG
+          docker tag $IMAGE_NAME:$TAG $ECR_REGISTRY/$IMAGE_NAME:$TAG
+          docker images | grep $IMAGE_NAME
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push $ECR_REGISTRY/$IMAGE_NAME:$TAG
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --force-new-deployment --region $AWS_REGION
