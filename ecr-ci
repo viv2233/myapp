@@ -1,0 +1,43 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'us-west-1'
+        ECR_REGISTRY = '490004636133.dkr.ecr.us-west-1.amazonaws.com'
+        IMAGE_NAME = 'vivproject'
+        IMAGE_TAG = 'latest'
+        FULL_IMAGE_NAME = "${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/viv2233/test-server.git'
+            }
+        }
+
+        stage('Login to AWS ECR') {
+            steps {
+                sh 'aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t ${IMAGE_NAME} .'
+            }
+        }
+
+        stage('Tag Docker Image') {
+            steps {
+                sh 'docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${FULL_IMAGE_NAME}'
+            }
+        }
+
+        stage('Push Docker Image to ECR') {
+            steps {
+                sh 'docker push ${FULL_IMAGE_NAME}'
+            }
+        }
+    }
+}
