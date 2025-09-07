@@ -1,0 +1,59 @@
+DevOps / Linux Engineer Resume
+Professional Summary
+
+Result-driven DevOps Engineer & Linux Administrator with expertise in automating infrastructure, deploying scalable applications, and optimizing system performance. Proven experience in AWS, Kubernetes, Jenkins, Docker, Grafana, Apache, and Nginx, with strong skills in CI/CD, monitoring, and system security. Adept at reducing downtime, improving deployment speed, and ensuring high system availability for mission-critical environments.
+
+Skills & Tools
+
+Cloud Platforms: AWS (EC2, S3, VPC, IAM, ELB, ECS, CloudWatch)
+Containerization & Orchestration: Docker, Kubernetes, Amazon ECS, EKS
+CI/CD & Automation: Jenkins, Git, GitHub/GitLab, CI/CD Pipelines, Webhooks
+Infrastructure as Code (IaC): Terraform, Ansible
+Operating Systems: Linux (Ubuntu, CentOS, RHEL)
+Web Servers & Load Balancing: Apache, Nginx (reverse proxy, SSL, load balancing)
+Monitoring & Logging: Grafana, Prometheus, CloudWatch, ELK Stack (Elasticsearch, Logstash, Kibana)
+Scripting & Programming: Bash, Python (basic)
+Database Management: MySQL, PostgreSQL (basic understanding)
+System Administration: User/Group Management, LVM, Cronjobs, Backup & Restore, Security Policies
+Networking Tools: Netstat, Lsof, Iostat, Sar, Dmesg, Tcpdump
+
+Professional Experience
+
+DevOps / Linux Administrator
+Company Name | Location | MM/YYYY – Present
+
+Reduced deployment time by 60% by designing and implementing CI/CD pipelines with Jenkins for microservices, integrated with Git and automated testing.
+
+Deployed and managed containerized applications using Docker, Kubernetes, and AWS ECS, ensuring high availability and scalability.
+
+Administered Linux servers (Ubuntu, RHEL, CentOS), optimizing performance and improving uptime to 99.9% SLA compliance.
+
+Configured and maintained Apache and Nginx web servers for load balancing, reverse proxying, and multi-virtual host environments, resulting in improved traffic handling by 40%.
+
+Monitored infrastructure and applications with Grafana dashboards, Prometheus, and CloudWatch, enabling proactive detection of bottlenecks and reducing incidents by 35%.
+
+Automated server administration tasks with Bash scripts and cron jobs, cutting manual effort by 50%.
+
+Improved system stability by troubleshooting service failures, user issues, and permission errors, reducing escalation tickets by 30%.
+
+Performed disk and LVM management, backups, and restores to ensure data integrity and disaster recovery readiness.
+
+Strengthened system security through IAM policies, user access controls, and patch management, achieving compliance with organizational standards.
+
+Collaborated with development teams to monitor app health, optimize queries, and ensure smooth deployments across staging and production.
+
+Key Projects
+
+CI/CD for Kubernetes & ECS: Designed a Jenkins pipeline to build, test, and deploy Dockerized applications into AWS ECS & Kubernetes clusters, with automated rollbacks and monitoring in Grafana.
+
+Monitoring Stack Setup: Implemented Grafana + Prometheus dashboards for real-time monitoring of applications, integrated alerting with Slack/Email for faster incident response.
+
+Web Server Optimization: Migrated legacy apps from Apache to Nginx reverse proxy with SSL termination and caching, improving response time by 45%.
+
+Education & Certifications
+
+Bachelor’s Degree in Computer Science / Information Technology (adjust as per your background)
+
+AWS Certified Solutions Architect – Associate (recommended if you have / plan to do)
+
+Red Hat Certified System Administrator (RHCSA) (optional but strong for Linux roles)
